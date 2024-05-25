@@ -1,0 +1,15 @@
+network:
+  address: "127.0.0.1:13666"
+  max-conn: 10
+  idle-max: 1800
+  message-size: 2024
+  conn-pool-retry-attempts: 3
+  conn-pool-retry-timeout: 5
+
+
+logging:
+  level: "info"
+  output: "./log/output.log"
+
+engine:
+  type: "in_memory"

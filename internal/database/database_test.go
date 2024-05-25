@@ -1,10 +1,10 @@
-package compute
+package database
 
 import (
 	"context"
-	"testing"
-
+	"github.com/alkosuv/in-mem-kv/internal/database/compute"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 type MockStorage struct {
@@ -25,14 +25,13 @@ func (m *MockStorage) Del(ctx context.Context, key string) (string, error) {
 	return m.DelFunc(ctx, key)
 }
 
-func TestComputeQuery(t *testing.T) {
-	ctx := context.Background()
+func TestDatabase_HandlerQuery(t *testing.T) {
 	storage := new(MockStorage)
-	compute := New(storage)
 
 	testCases := []struct {
 		name    string
 		request string
+		ctx     context.Context
 		setFunc func(context.Context, string, string) (string, error)
 		getFunc func(context.Context, string) (string, error)
 		delFunc func(context.Context, string) (string, error)
@@ -42,6 +41,7 @@ func TestComputeQuery(t *testing.T) {
 		{
 			name:    "SET command",
 			request: "SET key value",
+			ctx:     context.WithValue(context.Background(), "operation_id", "test"),
 			setFunc: func(ctx context.Context, key, value string) (string, error) {
 				return "OK", nil
 			},
@@ -50,6 +50,7 @@ func TestComputeQuery(t *testing.T) {
 		{
 			name:    "GET command",
 			request: "GET key",
+			ctx:     context.WithValue(context.Background(), "operation_id", "test"),
 			getFunc: func(ctx context.Context, key string) (string, error) {
 				return "value", nil
 			},
@@ -58,6 +59,7 @@ func TestComputeQuery(t *testing.T) {
 		{
 			name:    "DEL command",
 			request: "DEL key",
+			ctx:     context.WithValue(context.Background(), "operation_id", "test"),
 			delFunc: func(ctx context.Context, key string) (string, error) {
 				return "OK", nil
 			},
@@ -66,7 +68,8 @@ func TestComputeQuery(t *testing.T) {
 		{
 			name:    "Invalid command",
 			request: "INVALID command",
-			wantErr: ErrInvalidCommand,
+			ctx:     context.WithValue(context.Background(), "operation_id", "test"),
+			wantErr: compute.ErrInvalidCommand,
 		},
 	}
 
@@ -76,13 +79,14 @@ func TestComputeQuery(t *testing.T) {
 			storage.GetFunc = tc.getFunc
 			storage.DelFunc = tc.delFunc
 
-			res, err := compute.Query(ctx, tc.request)
+			db := NewDatabase(storage)
+			resp, err := db.HandlerQuery(tc.ctx, []byte(tc.request))
 
 			if tc.wantErr != nil {
 				assert.ErrorIs(t, err, tc.wantErr)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tc.want, res)
+				assert.Equal(t, tc.want, string(resp))
 			}
 		})
 	}

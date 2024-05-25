@@ -2,51 +2,46 @@ package main
 
 import (
 	"bufio"
-	"context"
+	"flag"
 	"fmt"
-	"github.com/alkosuv/in-mem-kv/internal/compute"
-	"github.com/alkosuv/in-mem-kv/internal/storage"
-	"github.com/alkosuv/in-mem-kv/internal/uuid"
+	"github.com/alkosuv/in-mem-kv/internal/logger"
+	"github.com/alkosuv/in-mem-kv/internal/network"
 	"log/slog"
 	"os"
 )
 
 func main() {
-	opts := &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, opts)))
 
-	s := storage.New()
-	cmp := compute.New(s)
+	var (
+		address     = flag.String("address", "127.0.0.1:13666", "address to listen")
+		messageSize = flag.Int("message-size", 1024, "message size")
+	)
+	flag.Parse()
+
+	logger.DefaultInit()
+
+	client := network.NewTCPClient(*address, *messageSize)
+	if err := client.Connect(); err != nil {
+		slog.Error("Failed to connect to server", "error", err)
+		os.Exit(1)
+	}
+	defer client.Close()
 
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("> ")
-		req, err := reader.ReadString('\n')
+		message, err := reader.ReadBytes('\n')
 		if err != nil {
-			slog.Error("read request", "error", err, "query", req)
+			slog.Error("read request", "error", err, "query", message)
 			continue
 		}
 
-		if req == "q\n" {
-			return
-		}
-
-		uuid, err := uuid.Generate()
+		resp, err := client.Send(message)
 		if err != nil {
-			slog.Error("generate uuid", "error", err)
+			slog.Error("send request", "error", err, "query", message)
 			continue
 		}
 
-		ctx := context.WithValue(context.Background(), "operation_id", uuid)
-		value, err := cmp.Query(ctx, req)
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			fmt.Printf("> %s\n", value)
-		}
-
+		fmt.Printf("< %s\n", string(resp))
 	}
-
 }
