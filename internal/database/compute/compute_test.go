@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestProcessingQuery(t *testing.T) {
+func TestProcessingCompute(t *testing.T) {
 	// Определяем контекст
 	ctx := context.Background()
 
@@ -55,7 +55,7 @@ func TestProcessingQuery(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := processingQuery(ctx, tc.input)
+			result, err := Compute(ctx, tc.input)
 			if (err != nil) != tc.expectErr {
 				t.Errorf("processingQuery(%q) вернул ошибку: %v, ожидается ошибка: %v", tc.input, err, tc.expectErr)
 				return

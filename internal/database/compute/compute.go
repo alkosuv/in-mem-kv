@@ -6,14 +6,8 @@ import (
 	"strings"
 )
 
-type Query struct {
-	Command Command
-	Key     string
-	Value   string
-}
-
-// processingQuery функция обрабатывает полученный запрос
-func processingQuery(ctx context.Context, req string) (Query, error) {
+// Compute функция обрабатывает полученный запрос
+func Compute(ctx context.Context, req string) (Query, error) {
 	tokens, err := parsingQuery(req)
 	if err != nil {
 		return Query{}, err
